@@ -108,6 +108,60 @@ OUT_INFO "安装基础软件包..."
 apt install curl wget vim unzip haveged gpg ethtool net-tools sudo bc iperf3 jq -y || OUT_ERROR "安装基础软件包失败"
 systemctl enable haveged
 
+# 配置Cloudflare DNS
+OUT_INFO "配置Cloudflare DNS记录..."
+zone_id="a9b03aaeb2188fe8d02260f0ce38b246"
+read -p "请输入Cloudflare API Token: " cf_token
+
+# 验证API Token和Zone ID
+if [ -z "$cf_token" ] || [ -z "$zone_id" ]; then
+    OUT_ERROR "Cloudflare API Token和Zone ID不能为空"
+    exit 1
+fi
+
+# 定义需要创建的DNS记录
+dns_records=(
+    "${domain_prefix}-np.${domain_suffix}"
+    "${domain_prefix}-hy.${domain_suffix}"
+    "${domain_prefix}-tj.${domain_suffix}"
+)
+
+# 为每个域名创建或更新DNS记录
+for domain in "${dns_records[@]}"; do
+    OUT_INFO "处理域名: $domain"
+    
+    # 检查DNS记录是否存在
+    record_id=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?name=$domain&type=A" \
+        -H "Authorization: Bearer $cf_token" \
+        -H "Content-Type: application/json" | jq -r '.result[0].id // empty')
+    
+    if [ -n "$record_id" ] && [ "$record_id" != "null" ]; then
+        # 更新现有记录
+        OUT_INFO "更新现有DNS记录: $domain"
+        response=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/$record_id" \
+            -H "Authorization: Bearer $cf_token" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\":\"A\",\"name\":\"$domain\",\"content\":\"$current_ip\",\"ttl\":300}")
+    else
+        # 创建新记录
+        OUT_INFO "创建新DNS记录: $domain"
+        response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records" \
+            -H "Authorization: Bearer $cf_token" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\":\"A\",\"name\":\"$domain\",\"content\":\"$current_ip\",\"ttl\":300}")
+    fi
+    
+    # 检查操作结果
+    success=$(echo "$response" | jq -r '.success')
+    if [ "$success" = "true" ]; then
+        OUT_INFO "DNS记录处理成功: $domain -> $current_ip"
+    else
+        OUT_ERROR "DNS记录处理失败: $domain"
+        echo "$response" | jq -r '.errors[]?.message // "未知错误"'
+    fi
+done
+
+OUT_INFO "DNS配置完成"
 
 # 配置DNS
 OUT_INFO "安装SmartDNS..."
