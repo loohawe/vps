@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install instructions:
-# bash <(curl -Ls https://gist.githubusercontent.com/loohawe/3c970479774626b5d4949a756fd50aa5/raw/07875037c3d27bd4dc9a3bcfdb990c5f204049c9/vps_install_nht.sh)
+# bash <(curl -Ls https://gist.githubusercontent.com/loohawe/3c970479774626b5d4949a756fd50aa5/raw/vps_install_nht.sh)
 
 echo=echo
 for cmd in echo /bin/echo; do
@@ -165,6 +165,11 @@ done
 
 OUT_INFO "DNS配置完成"
 
+# Append linux host file
+echo "$current_ip ${domain_prefix}-np.${domain_suffix}" >> /etc/hosts
+echo "$current_ip ${domain_prefix}-hy.${domain_suffix}" >> /etc/hosts
+echo "$current_ip ${domain_prefix}-tj.${domain_suffix}" >> /etc/hosts
+
 # 配置DNS
 OUT_INFO "安装SmartDNS..."
 ARCH=$(uname -m)
@@ -197,6 +202,11 @@ dualstack-ip-selection yes
 # 允许只返回 AAAA。系统层面设置 IPV4 优先，如果碰到 IPV6 延迟优秀的情况下，如果返回了 IPV4 地址则系统会使用 IPV4，失去了双栈测试的意义。
 dualstack-ip-allow-force-AAAA yes
 tcp-idle-time 300
+
+address /${domain_prefix}-np.${domain_suffix}/$current_ip
+address /${domain_prefix}-hy.${domain_suffix}/$current_ip
+address /${domain_prefix}-tj.${domain_suffix}/$current_ip
+
 server 1.1.1.1
 server 8.8.8.8
 EOF
