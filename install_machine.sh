@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Install instructions:
+# bash <(curl -Ls https://gist.githubusercontent.com/loohawe/3c970479774626b5d4949a756fd50aa5/raw/07875037c3d27bd4dc9a3bcfdb990c5f204049c9/vps_install_nht.sh)
 
 echo=echo
 for cmd in echo /bin/echo; do
@@ -105,7 +107,7 @@ cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime || OUT_ERROR "设置时区�
 
 # 安装基础软件包
 OUT_INFO "安装基础软件包..."
-apt install curl wget vim unzip haveged gpg ethtool net-tools sudo bc iperf3 jq -y || OUT_ERROR "安装基础软件包失败"
+apt install curl wget vim unzip haveged gpg ethtool net-tools sudo bc iperf3 jq lsof -y || OUT_ERROR "安装基础软件包失败"
 systemctl enable haveged
 
 # 配置Cloudflare DNS
@@ -212,7 +214,7 @@ OUT_INFO "配置网站..."
 mkdir -p /var/www/html && cd /var/www/html
 wget https://github.com/browserify/browserify-website/archive/gh-pages.zip || OUT_ERROR "下载网站文件失败"
 unzip gh-pages.zip
-mv browserify-website-gh-pages/* ./
+mv -f browserify-website-gh-pages/* ./
 rm -rf gh-pages.zip browserify-website-gh-pages
 
 # 安装sing-box
@@ -390,6 +392,45 @@ systemctl daemon-reload
 systemctl enable --now bbr-tcp.service
 
 OUT_INFO "[信息] 优化完毕！"
+
+# Naive Proxy 配置提示
+OUT_INFO "Naive Proxy 配置:"
+OUT_INFO "服务器地址: https://koneey:${service_password}@${domain_prefix}-np.${domain_suffix}:20443"
+
+# Sing-Box Outbunds 配置提示
+OUT_INFO "Sing-Box Outbunds 配置:"
+echo << EOF
+{
+    "type": "hysteria2",
+    "tag": "out_${hostname_input}_hy",
+    "server": "${domain_prefix}-hy.${domain_suffix}",
+    "server_port": 10443,
+    "up_mbps": 100,
+    "down_mbps": 1000,
+    "password": "${service_password}",
+    "tls": {
+        "enabled": true,
+        "disable_sni": false
+    },
+    "brutal_debug": false
+},
+{
+    "type": "trojan",
+    "tag": "out_${hostname_input}_tj",
+    "server": "${domain_prefix}-tj.${domain_suffix}",
+    "server_port": 18080,
+    "password": "${service_password}",
+    "network": "tcp"
+}
+EOF
+
+# Surge 配置提示
+OUT_INFO "Surge 配置提示:"
+echo << EOF
+[Proxy]
+hy_${hostname_input} = hysteria2, ${domain_prefix}-hy.${domain_suffix}:10443, password=${service_password}, download-bandwidth=1000, block-quic=on
+tj_${hostname_input} = trojan, ${domain_prefix}-tj.${domain_suffix}:18080, username=stinging, password=${service_password}, block-quic=on
+EOF 
 
 # 询问是否需要重启系统
 read -p "是否需要立即重启系统？(y/n): " restart_choice
