@@ -47,7 +47,7 @@ OUT_ALERT "[信息] 优化性能中！"
 
 # 修改系统密码
 OUT_INFO "设置系统密码..."
-read -s -p "请输入新密码 (直接回车跳过): " password
+read -p "请输入新密码 (直接回车跳过): " password #-s hide input
 echo ""
 if [ -n "$password" ]; then
     echo "root:$password" | chpasswd
@@ -64,11 +64,11 @@ domain_suffix="loohawe.com"
 
 # 设置服务密码
 OUT_INFO "设置服务密码..."
-read -s -p "请输入服务密码: " service_password
+read -p "请输入服务密码: " service_password
 # 生成随机密码如果未输入, 则循环直到输入非空密码
 while [ -z "$service_password" ]; do
     OUT_ERROR "服务密码不能为空，请重新输入。"
-    read -s -p "请输入服务密码: " service_password
+    read -p "请输入服务密码: " service_password
 done
 OUT_INFO "服务密码已设置"
 
@@ -274,7 +274,8 @@ cat << EOF > /etc/sing-box/config.json || OUT_ERROR "创建sing-box配置失败"
             "type": "naive",
             "tag": "naive_in",
             "listen": "::",
-            "listen_port": 20443,
+            "listen_port": 443,
+            "tcp_fast_open": true,
             "users": [
                 {
                 "username": "koneey",
@@ -296,7 +297,7 @@ cat << EOF > /etc/sing-box/config.json || OUT_ERROR "创建sing-box配置失败"
             "type": "hysteria2",
             "tag": "hy2_in",
             "listen": "::",
-            "listen_port": 10443,
+            "listen_port": 443,
             "up_mbps": 100,
             "down_mbps": 1000,
             "users": [
@@ -325,7 +326,8 @@ cat << EOF > /etc/sing-box/config.json || OUT_ERROR "创建sing-box配置失败"
             "type": "trojan",
             "tag": "trojan_in",
             "listen": "::",
-            "listen_port": 18080,
+            "listen_port": 443,
+            "tcp_fast_open": true,
             "users": [
                 {
                     "name": "stinging",
@@ -409,12 +411,12 @@ OUT_INFO "服务器地址: https://koneey:${service_password}@${domain_prefix}-n
 
 # Sing-Box Outbunds 配置提示
 OUT_INFO "Sing-Box Outbunds 配置:"
-echo << EOF
+cat << EOF
 {
     "type": "hysteria2",
     "tag": "out_${hostname_input}_hy",
     "server": "${domain_prefix}-hy.${domain_suffix}",
-    "server_port": 10443,
+    "server_port": 443,
     "up_mbps": 100,
     "down_mbps": 1000,
     "password": "${service_password}",
@@ -428,7 +430,7 @@ echo << EOF
     "type": "trojan",
     "tag": "out_${hostname_input}_tj",
     "server": "${domain_prefix}-tj.${domain_suffix}",
-    "server_port": 18080,
+    "server_port": 443,
     "password": "${service_password}",
     "network": "tcp"
 }
@@ -436,11 +438,11 @@ EOF
 
 # Surge 配置提示
 OUT_INFO "Surge 配置提示:"
-echo << EOF
+cat << EOF
 [Proxy]
 hy_${hostname_input} = hysteria2, ${domain_prefix}-hy.${domain_suffix}:10443, password=${service_password}, download-bandwidth=1000, block-quic=on
 tj_${hostname_input} = trojan, ${domain_prefix}-tj.${domain_suffix}:18080, username=stinging, password=${service_password}, block-quic=on
-EOF 
+EOF
 
 # 询问是否需要重启系统
 read -p "是否需要立即重启系统？(y/n): " restart_choice
@@ -453,3 +455,4 @@ else
 fi
 
 exit 0
+
