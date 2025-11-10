@@ -123,9 +123,7 @@ fi
 
 # 定义需要创建的DNS记录
 dns_records=(
-    "${domain_prefix}-np.${domain_suffix}"
-    "${domain_prefix}-hy.${domain_suffix}"
-    "${domain_prefix}-tj.${domain_suffix}"
+    "${domain_prefix}.${domain_suffix}"
 )
 
 # 为每个域名创建或更新DNS记录
@@ -166,9 +164,7 @@ done
 OUT_INFO "DNS配置完成"
 
 # Append linux host file
-echo "$current_ip ${domain_prefix}-np.${domain_suffix}" >> /etc/hosts
-echo "$current_ip ${domain_prefix}-hy.${domain_suffix}" >> /etc/hosts
-echo "$current_ip ${domain_prefix}-tj.${domain_suffix}" >> /etc/hosts
+echo "$current_ip ${domain_prefix}.${domain_suffix}" >> /etc/hosts
 
 # 配置DNS
 OUT_INFO "安装SmartDNS..."
@@ -203,9 +199,7 @@ dualstack-ip-selection yes
 dualstack-ip-allow-force-AAAA yes
 tcp-idle-time 300
 
-address /${domain_prefix}-np.${domain_suffix}/$current_ip
-address /${domain_prefix}-hy.${domain_suffix}/$current_ip
-address /${domain_prefix}-tj.${domain_suffix}/$current_ip
+address /${domain_prefix}.${domain_suffix}/$current_ip
 
 server 1.1.1.1
 server 8.8.8.8
@@ -275,6 +269,8 @@ cat << EOF > /etc/sing-box/config.json || OUT_ERROR "创建sing-box配置失败"
             "tag": "naive_in",
             "listen": "::",
             "listen_port": 443,
+            "sniff": false,
+            "domain_strategy": "prefer_ipv4",
             "tcp_fast_open": true,
             "users": [
                 {
@@ -284,9 +280,9 @@ cat << EOF > /etc/sing-box/config.json || OUT_ERROR "创建sing-box配置失败"
             ],
             "tls": {
                 "enabled": true,
-                "server_name": "${domain_prefix}-np.${domain_suffix}",
+                "server_name": "${domain_prefix}.${domain_suffix}",
                 "acme": {
-                    "domain": ["${domain_prefix}-np.${domain_suffix}"],
+                    "domain": ["${domain_prefix}.${domain_suffix}"],
                     "email": "me@loohawe.com",
                     "data_directory": "acme",
                     "provider": "letsencrypt"
@@ -297,7 +293,9 @@ cat << EOF > /etc/sing-box/config.json || OUT_ERROR "创建sing-box配置失败"
             "type": "hysteria2",
             "tag": "hy2_in",
             "listen": "::",
-            "listen_port": 443,
+            "listen_port": 1443,
+            "sniff": false,
+            "domain_strategy": "prefer_ipv4",
             "up_mbps": 100,
             "down_mbps": 1000,
             "users": [
@@ -308,12 +306,12 @@ cat << EOF > /etc/sing-box/config.json || OUT_ERROR "创建sing-box配置失败"
             ],
             "tls": {
                 "enabled": true,
-                "server_name": "${domain_prefix}-hy.${domain_suffix}",
+                "server_name": "${domain_prefix}.${domain_suffix}",
                 "alpn": [
                     "h3"
                 ],
                 "acme": {
-                    "domain": ["${domain_prefix}-hy.${domain_suffix}"],
+                    "domain": ["${domain_prefix}.${domain_suffix}"],
                     "email": "me@loohawe.com",
                     "data_directory": "acme",
                     "provider": "letsencrypt"
@@ -326,7 +324,7 @@ cat << EOF > /etc/sing-box/config.json || OUT_ERROR "创建sing-box配置失败"
             "type": "trojan",
             "tag": "trojan_in",
             "listen": "::",
-            "listen_port": 443,
+            "listen_port": 2443,
             "tcp_fast_open": true,
             "users": [
                 {
@@ -336,9 +334,9 @@ cat << EOF > /etc/sing-box/config.json || OUT_ERROR "创建sing-box配置失败"
             ],
             "tls": {
                 "enabled": true,
-                "server_name": "${domain_prefix}-tj.${domain_suffix}",
+                "server_name": "${domain_prefix}.${domain_suffix}",
                 "acme": {
-                    "domain": ["${domain_prefix}-tj.${domain_suffix}"],
+                    "domain": ["${domain_prefix}.${domain_suffix}"],
                     "email": "me@loohawe.com",
                     "data_directory": "acme",
                     "provider": "letsencrypt"
@@ -357,15 +355,6 @@ cat << EOF > /etc/sing-box/config.json || OUT_ERROR "创建sing-box配置失败"
     ],
     "route": {
         "rules": [
-            {
-                "inbound": [
-                    "naive_in", 
-                    "hy2_in", 
-                    "trojan_in"
-                ],
-                "action": "route",
-                "outbound": "direct-out"
-            },
             {
                 "action": "route",
                 "outbound": "direct-out"
@@ -407,7 +396,7 @@ OUT_INFO "[信息] 优化完毕！"
 
 # Naive Proxy 配置提示
 OUT_INFO "Naive Proxy 配置:"
-OUT_INFO "服务器地址: https://koneey:${service_password}@${domain_prefix}-np.${domain_suffix}:20443"
+OUT_INFO "服务器地址: https://koneey:${service_password}@${domain_prefix}.${domain_suffix}"
 
 # Sing-Box Outbunds 配置提示
 OUT_INFO "Sing-Box Outbunds 配置:"
@@ -415,8 +404,8 @@ cat << EOF
 {
     "type": "hysteria2",
     "tag": "out_${hostname_input}_hy",
-    "server": "${domain_prefix}-hy.${domain_suffix}",
-    "server_port": 443,
+    "server": "${domain_prefix}.${domain_suffix}",
+    "server_port": 1443,
     "up_mbps": 100,
     "down_mbps": 1000,
     "password": "${service_password}",
@@ -429,10 +418,11 @@ cat << EOF
 {
     "type": "trojan",
     "tag": "out_${hostname_input}_tj",
-    "server": "${domain_prefix}-tj.${domain_suffix}",
-    "server_port": 443,
+    "server": "${domain_prefix}.${domain_suffix}",
+    "server_port": 2443,
     "password": "${service_password}",
-    "network": "tcp"
+    "network": "tcp",
+    "tcp_fast_open": true
 }
 EOF
 
@@ -440,8 +430,8 @@ EOF
 OUT_INFO "Surge 配置提示:"
 cat << EOF
 [Proxy]
-hy_${hostname_input} = hysteria2, ${domain_prefix}-hy.${domain_suffix}:10443, password=${service_password}, download-bandwidth=1000, block-quic=on
-tj_${hostname_input} = trojan, ${domain_prefix}-tj.${domain_suffix}:18080, username=stinging, password=${service_password}, block-quic=on
+hy_${hostname_input} = hysteria2, ${domain_prefix}.${domain_suffix}, 1443, password=${service_password}, download-bandwidth=1000, tfo=true, block-quic=on
+tj_${hostname_input} = trojan, ${domain_prefix}.${domain_suffix}, 2443, username=stinging, password=${service_password}, tfo=true, block-quic=on
 EOF
 
 # 询问是否需要重启系统
