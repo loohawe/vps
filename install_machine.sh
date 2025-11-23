@@ -107,7 +107,7 @@ cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime || OUT_ERROR "设置时区�
 
 # 安装基础软件包
 OUT_INFO "安装基础软件包..."
-apt install curl wget vim unzip haveged gpg ethtool net-tools sudo bc iperf3 jq lsof -y || OUT_ERROR "安装基础软件包失败"
+apt install curl wget vim unzip haveged gpg ethtool net-tools sudo bc iperf3 jq lsof rsync -y || OUT_ERROR "安装基础软件包失败"
 systemctl enable haveged
 
 # 配置Cloudflare DNS
@@ -445,4 +445,3 @@ else
 fi
 
 exit 0
-

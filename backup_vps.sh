@@ -44,17 +44,33 @@ done
 
 mkdir -p ${backup_dir} || { OUT_ERROR "创建备份目录失败"; exit 1; }
 
+# 备份 ssh 配置文件
+ssh_dir=${backup_dir}/ssh/etc
+mkdir -p ${ssh_dir} || { OUT_ERROR "创建ssh备份目录失败"; exit 1; }
+rsync -avz -e ssh ${host_ssh_config_name}:/etc/ssh/ ${ssh_dir}/ || { OUT_ERROR "备份ssh配置文件失败"; exit 1; }
+# scp -r ${host_ssh_config_name}:/etc/ssh/* ${ssh_dir}/ || { OUT_ERROR "备份ssh配置文件失败"; exit 1; }
+OUT_INFO "备份ssh配置文件完成"
+
+# 备份sing-box
 sing_box_dir=${backup_dir}/sing-box
 mkdir -p ${sing_box_dir} || { OUT_ERROR "创建sing-box备份目录失败"; exit 1; }
 
 sing_box_etc=${sing_box_dir}/etc
 mkdir -p ${sing_box_etc} || { OUT_ERROR "创建sing-box配置备份目录失败"; exit 1; }
-# rsync -avz -e ssh ${host_ssh_config_name}:/etc/sing-box/ ${sing_box_etc}/ || { OUT_ERROR "备份sing-box配置文件失败"; exit 1; }
-scp -r ${host_ssh_config_name}:/etc/sing-box/* ${sing_box_etc}/ || { OUT_ERROR "备份sing-box配置文件失败"; exit 1; }
+rsync -avz -e ssh ${host_ssh_config_name}:/etc/sing-box/ ${sing_box_etc}/ || { OUT_ERROR "备份sing-box配置文件失败"; exit 1; }
+# scp -r ${host_ssh_config_name}:/etc/sing-box/* ${sing_box_etc}/ || { OUT_ERROR "备份sing-box配置文件失败"; exit 1; }
 
 sing_box_workdir=${sing_box_dir}/var
 mkdir -p ${sing_box_workdir} || { OUT_ERROR "创建sing-box工作目录备份目录失败"; exit 1; }
-# rsync -avz -e ssh ${host_ssh_config_name}:/var/lib/sing-box/ ${sing_box_workdir}/ || { OUT_ERROR "备份sing-box工作目录失败"; exit 1; }
-scp -r ${host_ssh_config_name}:/var/lib/sing-box/* ${sing_box_workdir}/ || { OUT_ERROR "备份sing-box工作目录失败"; exit 1; }
+rsync -avz -e ssh ${host_ssh_config_name}:/var/lib/sing-box/ ${sing_box_workdir}/ || { OUT_ERROR "备份sing-box工作目录失败"; exit 1; }
+# scp -r ${host_ssh_config_name}:/var/lib/sing-box/* ${sing_box_workdir}/ || { OUT_ERROR "备份sing-box工作目录失败"; exit 1; }
+OUT_INFO "备份sing-box完成"
+
+# 备份 smartdns
+smartdns_dir=${backup_dir}/smartdns/etc
+mkdir -p ${smartdns_dir} || { OUT_ERROR "创建smartdns备份目录失败"; exit 1; }
+rsync -avz -e ssh ${host_ssh_config_name}:/etc/smartdns/ ${smartdns_dir}/ || { OUT_ERROR "备份smartdns配置文件失败"; exit 1; }
+# scp -r ${host_ssh_config_name}:/etc/smartdns/* ${smartdns_dir}/ || { OUT_ERROR "备份smartdns配置文件失败"; exit 1; }
+OUT_INFO "备份smartdns完成"
 
 OUT_INFO "备份完成，备份文件位于: ${backup_dir}"

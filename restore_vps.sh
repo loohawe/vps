@@ -36,7 +36,7 @@ read -p "请输入主机名: " host_ssh_config_name
 OUT_INFO "Input Backup Directory Path"
 read -p "请输入备份目录路径: " backup_dir
 
-sync_sing-box() {
+restore_sing-box() {
     OUT_INFO "Restoring sing-box configuration and data..."
 
     sing_box_dir=${backup_dir}/sing-box
@@ -44,12 +44,35 @@ sync_sing-box() {
     sing_box_workdir=${sing_box_dir}/var
 
     # 恢复sing-box配置文件
-    scp -r ${sing_box_etc}/* ${host_ssh_config_name}:/etc/sing-box/ || { OUT_ERROR "恢复sing-box配置文件失败"; return 1; }
+    rsync -avz -e ssh ${sing_box_etc}/ ${host_ssh_config_name}:/etc/sing-box/ || { OUT_ERROR "恢复sing-box配置文件失败"; return 1; }
+    # scp -r ${sing_box_etc}/* ${host_ssh_config_name}:/etc/sing-box/ || { OUT_ERROR "恢复sing-box配置文件失败"; return 1; }
 
     # 恢复sing-box工作目录
-    scp -r ${sing_box_workdir}/* ${host_ssh_config_name}:/var/lib/sing-box/ || { OUT_ERROR "恢复sing-box工作目录失败"; return 1; }
+    rsync -avz -e ssh ${sing_box_workdir}/ ${host_ssh_config_name}:/var/lib/sing-box/ || { OUT_ERROR "恢复sing-box工作目录失败"; return 1; }
 
     OUT_INFO "sing-box restoration completed."
+}
+
+restore_smartdns() {
+    OUT_INFO "Restoring smartdns configuration..."
+
+    smartdns_dir=${backup_dir}/smartdns/etc
+
+    # 恢复smartdns配置文件
+    rsync -avz -e ssh ${smartdns_dir}/ ${host_ssh_config_name}:/etc/smartdns/ || { OUT_ERROR "恢复smartdns配置文件失败"; return 1; }
+
+    OUT_INFO "smartdns restoration completed."
+}
+
+restore_ssh() {
+    OUT_INFO "Restoring ssh configuration..."
+
+    ssh_dir=${backup_dir}/ssh/etc
+
+    # 恢复ssh配置文件
+    rsync -avz -e ssh ${ssh_dir}/ ${host_ssh_config_name}:/etc/ssh/ || { OUT_ERROR "恢复ssh配置文件失败"; return 1; }
+
+    OUT_INFO "ssh restoration completed."
 }
 
 # 遍历备份目录下的所有目录
@@ -60,10 +83,26 @@ for dir in ${backup_dir}/*; do
     # 如果目录名为 sing-box，则跳转到对应的同步方法
     if [ "$dir_name" = "sing-box" ]; then
         # 检查方法是否存在，如果存在则调用
-        if declare -f "sync_${dir_name}" > /dev/null; then
-            sync_${dir_name}
+        if declare -f "restore_${dir_name}" > /dev/null; then
+            restore_${dir_name}
         else
-            OUT_ALERT "Method sync_${dir_name} not found, skipping..."
+            OUT_ALERT "Method restore_${dir_name} not found, skipping..."
         fi
+    # 如果目录名为 smartdns，则跳转到对应的同步方法
+    elif [ "$dir_name" = "smartdns" ]; then
+        if declare -f "restore_${dir_name}" > /dev/null; then
+            restore_${dir_name}
+        else
+            OUT_ALERT "Method restore_${dir_name} not found, skipping..."
+        fi
+    # 如果目录名为 ssh，则跳转到对应的同步方法
+    elif [ "$dir_name" = "ssh" ]; then
+        if declare -f "restore_${dir_name}" > /dev/null; then
+            restore_${dir_name}
+        else
+            OUT_ALERT "Method restore_${dir_name} not found, skipping..."
+        fi
+    else
+        OUT_ALERT "No restoration method for directory: $dir_name, skipping..."
     fi
 done
